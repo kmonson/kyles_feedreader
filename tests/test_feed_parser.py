@@ -29,7 +29,4 @@ def test_parser():
     r = feed_parsing.parse_feed(feed_data)
 
     assert r["name"] == "Sample Feed"
-    assert r["description"] == "For documentation <em>only</em>"
-    # url
-    # home_page
-    # etag
+    assert r["description"] == "For documentation only"
