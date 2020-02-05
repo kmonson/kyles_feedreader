@@ -51,35 +51,37 @@ Database Interface
 peewee does not support gevent in SQLite.
 We will need to roll our own or not worry about it.
 
-`initialize_db(provider='sqlite', **kwargs)`
+.. code::
 
-add_feed(name, url, home_page, update_rate=1 hour, group=None)
+    initialize_db(provider='sqlite', **kwargs)
 
-add_group(name)
+    add_feed(name, url, home_page, update_rate=1 hour, group=None)
 
-update_feed(feed_id,
-          group=None
-          name=None
-          url=None
-          home_page=None
-          last_update=None
-          etag=None
-          last_modified=None
-          update_rate=None)
+    add_group(name)
 
-get_feeds()
+    update_feed(feed_id,
+              group=None
+              name=None
+              url=None
+              home_page=None
+              last_update=None
+              etag=None
+              last_modified=None
+              update_rate=None)
 
-delete_feed(feed_id)
+    get_feeds()
 
-get_feed_items(unread, group=None, feed=None)
+    delete_feed(feed_id)
 
-add_feed_items(feed_id, items)
+    get_feed_items(unread, group=None, feed=None)
 
-update_feed_item(item_id, read: bool, viewed: bool)
+    add_feed_items(feed_id, items)
 
-delete_feed_items(item_id and/or feed_id and/or read, and/or leave_count)
+    update_feed_item(item_id, read: bool, viewed: bool)
 
-unviewed_feed_items() -> bool
+    delete_feed_items(item_id and/or feed_id and/or read, and/or leave_count)
+
+    unviewed_feed_items() -> bool
 
 
 Feed Parser Interface
@@ -88,14 +90,14 @@ Feed Parser Interface
 parse_feed(feed_str: str, newer_than: Optional[datetime] = None) ->
     - feed_object
         - feed
-            name
-            description
-            url
-            home_page
-            etag if available
-            last_modified if available as string
+            - name
+            - description
+            - url
+            - home_page
+            - etag if available
+            - last_modified if available as string
         - entries
-            enclosure_url if available
-            timestamp as datetime
-            text
-            url
+            - enclosure_url if available
+            - timestamp as datetime
+            - text
+            - url
