@@ -28,7 +28,7 @@ class Feed(db.Entity):
 class FeedItem(db.Entity):
     feed = orm.Required(Feed)
     enclosure_url = orm.Optional(str)
-    enclosure_uri = orm.Optional(str)
+    enclosure_path = orm.Optional(str)
     timestamp = orm.Required(datetime, index=True)
     read = orm.Required(bool, index=True, default=bool)
     viewed = orm.Required(bool, default=bool)

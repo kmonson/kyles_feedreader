@@ -7,7 +7,7 @@ REQUIRED_FEED_ELEMENTS = ("title", "link")
 REQUIRED_ENTRY_ELEMENTS = ()
 
 
-def parse_feed(feed_url: str, newer_than: Optional[datetime] = None, etag=None, modified=None):
+def parse_feed(feed_url: str, newer_than: Optional[datetime] = datetime.min, etag=None, modified=None):
     feed = fp.parse(feed_url, etag=etag, modified=modified)
 
     results = dict()
@@ -29,12 +29,15 @@ def parse_feed(feed_url: str, newer_than: Optional[datetime] = None, etag=None, 
     results["description"] = BeautifulSoup(f.get("description", ""), features="html.parser").get_text()
     results["home_page"] = f.link
 
-    results["url"] = feed_url
+    results["url"] = feed_url if feed_url.startswith("http") else None
 
     results["entries"] = entry_results = []
     for e in entries:
         e_map = dict()
-        e_map["timestamp"] = datetime(*e.published_parsed[:6])
+        timestamp = datetime(*e.published_parsed[:6])
+        if timestamp <= newer_than:
+            continue
+        e_map["timestamp"] = timestamp
         e_map["text"] = BeautifulSoup(e.summary, features="html.parser").get_text()
         e_map["url"] = e.link
 
