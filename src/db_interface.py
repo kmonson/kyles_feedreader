@@ -1,9 +1,9 @@
 # By Kyle Monson
 
 from collections import defaultdict
-from datetime import timedelta
 from pony import orm
 from .db_model import db, Group, Feed, FeedItem
+from .defaults import update_rate
 
 
 def initialize_sql(filename):
@@ -26,13 +26,13 @@ def _group_find_add_helper(group_name):
 
 
 @orm.db_session
-def add_feed(name, url, home_page, update_rate=timedelta(hours=1), group_name=None):
+def add_feed(name, url, home_page, rate=update_rate, group_name=None):
     group = _group_find_add_helper(group_name)
 
     f = Feed(name=name,
              url=url,
              home_page=home_page,
-             update_rate=update_rate,
+             update_rate=rate,
              group=group)
 
     return f.to_dict()
