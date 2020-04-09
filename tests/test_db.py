@@ -79,6 +79,10 @@ def test_add_feed(session):
     assert f["last_modified"] == ""
     assert f["id"] == feed_id
 
+    # Test duplicate add
+    with pytest.raises(ValueError):
+        f = session.add_feed("Foo", "url", "homepage")
+
 
 def test_delete_feed(session):
     f = session.add_feed("Foo", "url", "homepage")

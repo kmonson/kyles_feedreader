@@ -7,3 +7,4 @@ requests
 grequests
 pytest
 beautifulsoup4
+dateparser

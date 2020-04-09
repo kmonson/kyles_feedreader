@@ -29,6 +29,10 @@ def _group_find_add_helper(group_name):
 def add_feed(name, url, home_page, rate=update_rate, group_name=None):
     group = _group_find_add_helper(group_name)
 
+    f = Feed.get(url=url)
+    if f is not None:
+        raise ValueError(f"Feed at {url} already exists in database.")
+
     f = Feed(name=name,
              url=url,
              home_page=home_page,
@@ -91,3 +95,32 @@ def add_feed_items(feed_id, items):
     for item in items:
         FeedItem(feed=feed,
                  **item)
+
+
+def _get_feed_item_query(unread_only):
+    if unread_only:
+        return FeedItem.select()
+    else:
+        return orm.select(i for i in FeedItem if not i.read)
+
+
+@orm.db_session
+def get_all_feed_items(unread_only=True):
+    q = _get_feed_item_query(unread_only)
+    return [f.to_dict() for f in q]
+
+
+@orm.db_session
+def get_group_feed_items(group_id, unread_only=True):
+    q = _get_feed_item_query(unread_only)
+    group = Group[group_id]
+    q = orm.select(i for i in q if i.feed.group == group)
+    return [f.to_dict() for f in q]
+
+
+@orm.db_session
+def get_feed_items(feed_id, unread_only=True):
+    q = _get_feed_item_query(unread_only)
+    feed = Feed[feed_id]
+    q = orm.select(i for i in q if i.feed == feed)
+    return [f.to_dict() for f in q]

@@ -32,6 +32,7 @@ class FeedItem(db.Entity):
     timestamp = orm.Required(datetime, index=True)
     read = orm.Required(bool, index=True, default=bool)
     viewed = orm.Required(bool, default=bool)
-    text = orm.Required(str)
+    title = orm.Required(str)
+    text = orm.Optional(str)
     url = orm.Required(str, unique=True)
     orm.composite_index(read, timestamp)
