@@ -1,7 +1,12 @@
 import feedparser as fp
 import dateparser
 from datetime import datetime
+import warnings
+
 from bs4 import BeautifulSoup
+
+# BeautifulSoup complains about some possible inputs so I have to suppress it's whiny butt.
+warnings.filterwarnings("ignore", category=UserWarning, module='bs4')
 
 
 def handler(date_string):
@@ -19,7 +24,13 @@ REQUIRED_FEED_ELEMENTS = ("title", "link")
 REQUIRED_ENTRY_ELEMENTS = ()
 
 
-def parse_feed(feed_url: str, newer_than: datetime = datetime.min, etag=None, modified=None):
+def parse_feed(feed_url: str, etag=None, modified=None):
+    # Make sure we aren't passing empty strings to fp.parse.
+    if not etag:
+        etag = None
+    if not modified:
+        modified = None
+
     feed = fp.parse(feed_url, etag=etag, modified=modified)
 
     results = dict()
@@ -46,9 +57,9 @@ def parse_feed(feed_url: str, newer_than: datetime = datetime.min, etag=None, mo
     results["entries"] = entry_results = []
     for e in entries:
         e_map = dict()
-        timestamp = datetime(*e.published_parsed[:6])
-        if timestamp <= newer_than:
-            continue
+        timestamp = None
+        if hasattr(e, "published_parsed"):
+            timestamp = datetime(*e.published_parsed[:6])
         e_map["timestamp"] = timestamp
         e_map["title"] = e.title
         e_map["text"] = BeautifulSoup(e.summary, features="html.parser").get_text()
