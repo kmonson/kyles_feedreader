@@ -1,7 +1,9 @@
 # By Kyle Monson
 
 from collections import defaultdict
+import datetime
 from pony import orm
+import pytz
 from .db_model import db, Group, Feed, FeedItem
 from .defaults import update_rate
 
@@ -80,8 +82,14 @@ def delete_feed(feed_id):
 
 @orm.db_session
 def update_feed(feed_id, **kwargs):
+    if "group_name" in kwargs and "group_id" in kwargs:
+        raise ValueError("Only allowed to specify group_id or group_name, but not both.")
     group_name = kwargs.pop("group_name", None)
     group = _group_find_add_helper(group_name)
+    if group is None:
+        group_id = kwargs.pop("group_id", None)
+        if group_id is not None:
+            group = Group[group_id]
     if group is not None:
         kwargs["group"] = group
 
@@ -95,6 +103,10 @@ def add_feed_items(feed_id, items):
     for item in items:
         FeedItem(feed=feed,
                  **item)
+
+    last_update = datetime.datetime.utcnow()
+    last_update = last_update.replace(tzinfo=pytz.utc)
+    feed.last_update = last_update
 
 
 def _get_feed_item_query(unread_only):

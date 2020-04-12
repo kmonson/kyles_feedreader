@@ -1,8 +1,8 @@
 import pytest
-from src import db_interface as dbi
-from src.db_model import db
+from kyles_feedreader import db_interface as dbi
+from kyles_feedreader.db_model import db
 from pony import orm
-from datetime import timedelta, datetime
+from datetime import timedelta
 
 
 @pytest.fixture(scope="session")

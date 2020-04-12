@@ -8,3 +8,4 @@ grequests
 pytest
 beautifulsoup4
 dateparser
+python-dateutil

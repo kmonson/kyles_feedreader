@@ -1,8 +1,6 @@
-import gevent
 from gevent.event import Event
-from . import feed_parsing
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 @dataclass

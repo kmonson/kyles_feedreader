@@ -1,6 +1,5 @@
-import pytest
-from src import feed_parsing
-from datetime import timedelta, datetime
+from kyles_feedreader import feed_parsing
+from datetime import datetime
 
 
 feed_data = """<?xml version="1.0" encoding="utf-8"?>

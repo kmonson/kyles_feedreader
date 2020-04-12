@@ -2,7 +2,8 @@
 
 import sys
 import click
-from . import defaults, db_interface
+
+from kyles_feedreader import db_interface, defaults
 from .feed_parsing import parse_feed
 
 
@@ -61,10 +62,15 @@ def update(name):
 
 def print_feed_list(feed_list, verbose):
     for feed in feed_list:
-        click.echo("\t" + feed["name"])
+        click.echo(f"\t{feed['name']} Updated: {feed['last_update']}")
+        click.echo(f"\t Homepage: {feed['home_page']}")
+        click.echo(f"\t URL: {feed['url']}")
         if verbose:
             for item in db_interface.get_feed_items(feed["id"]):
-                click.echo("\t\t" + item["title"])
+                click.echo(f"\t\t{item['title']}")
+                click.echo(f"\t\t URL: {item['url']}")
+                click.echo(f"\t\t Enclosure: {item['enclosure_url']}")
+                click.echo(f"\t\t Read: {item['read']}")
 
 
 @cli.command(name="list")
