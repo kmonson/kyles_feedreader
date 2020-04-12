@@ -87,6 +87,18 @@ def get_feeds():
 
 
 @orm.db_session
+def get_flat_feeds():
+    result = list()
+    q = Feed.select().sort_by(Feed.name)
+    for f in q:
+        fd = f.to_dict()
+        fd["last_update"] = utc_unaware_to_local(fd.get("last_update"))
+        result.append(fd)
+
+    return result
+
+
+@orm.db_session
 def delete_feed(feed_id):
     Feed[feed_id].delete()
 
@@ -112,8 +124,11 @@ def add_feed_items(feed_id, items):
     feed = Feed[feed_id]
 
     for item in items:
-        FeedItem(feed=feed,
-                 **item)
+        # Make sure it doesn't exist before we try to add it.
+        feed_item = FeedItem.get(url=item["url"])
+        if feed_item is None:
+            FeedItem(feed=feed,
+                     **item)
 
     last_update = datetime.datetime.utcnow()
     # Pony doesn't support this yet.
@@ -123,9 +138,9 @@ def add_feed_items(feed_id, items):
 
 def _get_feed_item_query(unread_only):
     if unread_only:
-        return FeedItem.select()
+        return FeedItem.select().sort_by(FeedItem.timestamp)
     else:
-        return orm.select(i for i in FeedItem if not i.read)
+        return orm.select(i for i in FeedItem if not i.read).sort_by(FeedItem.timestamp)
 
 
 @orm.db_session
@@ -148,3 +163,4 @@ def get_feed_items(feed_id, unread_only=True):
     feed = Feed[feed_id]
     q = orm.select(i for i in q if i.feed == feed)
     return [f.to_dict() for f in q]
+

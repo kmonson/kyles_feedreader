@@ -2,7 +2,7 @@
 
 import sys
 import click
-from dateutil.tz import tzlocal
+import pathlib
 
 from . import db_interface, defaults
 from .feed_parsing import parse_feed
@@ -12,30 +12,30 @@ from .feed_parsing import parse_feed
 @click.option("--db-path", default=defaults.db_path, type=click.Path(dir_okay=False, resolve_path=True))
 # @click.option("--config-path", default=defaults.config_path)
 def cli(db_path, config_path=None):
-    print(db_path)
+    pathlib.Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     db_interface.initialize_sql(db_path)
 
 
 @cli.command()
-@click.argument("url")
 @click.option("--group")
 @click.option("--name")
-def add(url, group=None, name=None):
-    f = parse_feed(url)
-    if f is None:
-        click.echo("Invalid URL")
-        sys.exit(1)
-    if name is None:
+@click.argument("urls", nargs=-1)
+def add(urls, group=None):
+    for url in urls:
+        f = parse_feed(url)
+        if f is None:
+            click.echo("Invalid URL")
+            sys.exit(1)
         name = f["name"]
-    try:
-        db_f = db_interface.add_feed(name, url, f["home_page"], group_name=group)
-    except ValueError as e:
-        click.echo(str(e))
-        sys.exit(1)
+        try:
+            db_f = db_interface.add_feed(name, url, f["home_page"], group_name=group)
+        except ValueError as e:
+            click.echo(str(e))
+            sys.exit(1)
 
-    feed_id = db_f["id"]
+        feed_id = db_f["id"]
 
-    db_interface.add_feed_items(feed_id, f["entries"])
+        db_interface.add_feed_items(feed_id, f["entries"])
 
 
 @cli.command()
@@ -57,9 +57,20 @@ def delete_group(name):
 
 
 @cli.command()
-@click.option("--name")
-def update(name):
-    pass
+def update():
+    feeds = db_interface.get_flat_feeds()
+    for feed in feeds:
+        click.echo(f"Updating {feed['name']}")
+        url = feed["url"]
+        f = parse_feed(url, etag=feed['etag'], modified=feed['last_modified'])
+        if f is None:
+            click.echo(f"{feed['name']} did not update. parse_feed returned None for whatever reason.")
+            continue
+
+        click.echo(f"Updating {feed['name']} entries in database.")
+
+        feed_id = feed["id"]
+        db_interface.add_feed_items(feed_id, f["entries"])
 
 
 def print_feed_list(feed_list, verbose):
