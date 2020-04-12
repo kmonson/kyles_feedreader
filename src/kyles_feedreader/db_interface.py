@@ -2,8 +2,9 @@
 
 from collections import defaultdict
 import datetime
-from pony import orm
 import pytz
+from dateutil.tz import tzlocal
+from pony import orm
 from .db_model import db, Group, Feed, FeedItem
 from .defaults import update_rate
 
@@ -64,13 +65,23 @@ def get_groups():
     return [g.to_dict() for g in q]
 
 
+def utc_unaware_to_local(ts):
+    if ts is not None:
+        ts = ts.replace(tzinfo=pytz.utc)
+        ts = ts.astimezone(tzlocal())
+        return ts
+    return None
+
+
 @orm.db_session
 def get_feeds():
     result = defaultdict(list)
     q = Feed.select().sort_by(Feed.group, Feed.name)
     for f in q:
         name = f.group.name if f.group is not None else None
-        result[name].append(f.to_dict())
+        fd = f.to_dict()
+        fd["last_update"] = utc_unaware_to_local(fd.get("last_update"))
+        result[name].append(fd)
 
     return result
 
@@ -105,7 +116,8 @@ def add_feed_items(feed_id, items):
                  **item)
 
     last_update = datetime.datetime.utcnow()
-    last_update = last_update.replace(tzinfo=pytz.utc)
+    # Pony doesn't support this yet.
+    # last_update = last_update.replace(tzinfo=pytz.utc)
     feed.last_update = last_update
 
 

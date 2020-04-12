@@ -2,15 +2,17 @@
 
 import sys
 import click
+from dateutil.tz import tzlocal
 
-from kyles_feedreader import db_interface, defaults
+from . import db_interface, defaults
 from .feed_parsing import parse_feed
 
 
 @click.group()
-@click.option("--db-path", default=defaults.db_path)
+@click.option("--db-path", default=defaults.db_path, type=click.Path(dir_okay=False, resolve_path=True))
 # @click.option("--config-path", default=defaults.config_path)
 def cli(db_path, config_path=None):
+    print(db_path)
     db_interface.initialize_sql(db_path)
 
 
@@ -68,6 +70,7 @@ def print_feed_list(feed_list, verbose):
         if verbose:
             for item in db_interface.get_feed_items(feed["id"]):
                 click.echo(f"\t\t{item['title']}")
+                click.echo(f"\t\t Timestamp: {item['timestamp']}")
                 click.echo(f"\t\t URL: {item['url']}")
                 click.echo(f"\t\t Enclosure: {item['enclosure_url']}")
                 click.echo(f"\t\t Read: {item['read']}")
@@ -77,7 +80,6 @@ def print_feed_list(feed_list, verbose):
 @click.option("-v", "--verbose", is_flag=True)
 def list_(verbose):
     feeds = db_interface.get_feeds()
-    print(feeds)
     no_group = feeds.pop(None, [])
     for group, feed_list in feeds.items():
         click.echo(group, color="green")
