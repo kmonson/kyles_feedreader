@@ -1,11 +1,11 @@
 # By Kyle Monson
 
-import sys
 import click
 import pathlib
+import xml.etree.ElementTree as ET
 
 from . import db_interface, defaults
-from .feed_parsing import parse_feed
+from .feed_parsing import parse_feed, ResultType
 
 
 @click.group()
@@ -16,48 +16,64 @@ def cli(db_path, config_path=None):
     db_interface.initialize_sql(db_path)
 
 
+def _add_from_url(url, group=None):
+    r, f = parse_feed(url)
+    if r in (ResultType.ERROR, ResultType.AUTH_ERROR):
+        click.echo(f"Error: {f['status'].phrase}, {f['status'].description}")
+        return
+
+    name = f["name"]
+    db_f = db_interface.add_get_feed(name, url, f["home_page"], group_name=group)
+
+    feed_id = db_f["id"]
+
+    db_interface.add_feed_items(feed_id, f["entries"])
+
+
 @cli.command()
 @click.option("--group")
-@click.option("--name")
 @click.argument("urls", nargs=-1)
 def add(urls, group=None):
+    """Add feeds specified at URLS to feed db."""
     for url in urls:
-        f = parse_feed(url)
-        if f is None:
-            click.echo("Invalid URL")
-            sys.exit(1)
-        name = f["name"]
+        _add_from_url(url, group)
+
+
+@cli.command()
+@click.argument("names")
+def add_group(names):
+    """Add groups specified by NAMES to feed db."""
+    for name in names:
         try:
-            db_f = db_interface.add_feed(name, url, f["home_page"], group_name=group)
+            db_interface.add_group(name)
+            click.echo(f"Created {name}")
         except ValueError as e:
             click.echo(str(e))
-            sys.exit(1)
 
-        feed_id = db_f["id"]
-
-        db_interface.add_feed_items(feed_id, f["entries"])
 
 
 @cli.command()
-@click.argument("name")
-def add_group(name):
-    pass
+@click.argument("urls", nargs=-1)
+def delete(urls):
+    """Delete feeds specified at URLS from feed db."""
+    urls = set(urls)
+    for url in urls:
+        db_interface.delete_feed(url)
 
 
 @cli.command()
-@click.argument("name")
-def delete(name):
-    pass
+@click.argument("names", nargs=-1)
+def delete_group(names):
+    """Delete groups specified by NAMES from feed db."""
+    names = set(names)
+    for name in names:
+        db_interface.delete_group(name)
 
-
-@cli.command()
-@click.argument("name")
-def delete_group(name):
-    pass
 
 
 @cli.command()
 def update():
+    """Update all feeds in feed db.."""
     feeds = db_interface.get_flat_feeds()
     for feed in feeds:
         click.echo(f"Updating {feed['name']}")
@@ -90,6 +106,7 @@ def print_feed_list(feed_list, verbose):
 @cli.command(name="list")
 @click.option("-v", "--verbose", is_flag=True)
 def list_(verbose):
+    """List all feeds, sorted by group."""
     feeds = db_interface.get_feeds()
     no_group = feeds.pop(None, [])
     for group, feed_list in feeds.items():
@@ -98,6 +115,32 @@ def list_(verbose):
 
     click.echo("No Group", color="green")
     print_feed_list(no_group, verbose)
+
+
+@cli.command(name="import")
+@click.argument("files", nargs=-1, type=click.Path(dir_okay=False, resolve_path=True, exists=True))
+def import_(files):
+    """Import OPML file."""
+    def add_feeds(feeds, group_name=None):
+        for f in feeds:
+            feed_name = f.attrib.get("text")
+            url = f.attrib.get("xmlUrl")
+            click.echo(f"Adding feed {feed_name} at {url}")
+            _add_from_url(url, group_name)
+
+    for path in files:
+        tree = ET.parse(path)
+        root = tree.getroot()
+        groups = root.findall(".//outline/..[@text]")
+        for g in groups:
+            group_name = g.attrib.get("text")
+            click.echo(f"Processing Group {group_name}")
+            feeds = g.findall("./outline")
+            add_feeds(feeds, group_name)
+
+        click.echo("Processing ungrouped feeds")
+        feeds = root.findall("./body/outline/[@xmlUrl]")
+        add_feeds(feeds)
 
 
 if __name__ == "__main__":

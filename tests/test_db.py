@@ -55,7 +55,7 @@ def test_delete_group_with_name(session):
 
 
 def test_add_feed(session):
-    f = session.add_feed("Foo", "url", "homepage")
+    f = session.add_get_feed("Foo", "url", "homepage")
     assert f["name"] == "Foo"
     assert f["url"] == "url"
     assert f["home_page"] == "homepage"
@@ -80,12 +80,13 @@ def test_add_feed(session):
     assert f["id"] == feed_id
 
     # Test duplicate add
-    with pytest.raises(ValueError):
-        f = session.add_feed("Foo", "url", "homepage")
+    f2 = session.add_get_feed("Foo", "url", "homepage")
+
+    assert f == f2
 
 
 def test_delete_feed(session):
-    f = session.add_feed("Foo", "url", "homepage")
+    f = session.add_get_feed("Foo", "url", "homepage")
     feed_id = f["id"]
     session.delete_feed(feed_id)
     f_dict = session.get_feeds()
@@ -93,7 +94,7 @@ def test_delete_feed(session):
 
 
 def test_update_feed(session):
-    f = session.add_feed("Foo", "url", "homepage")
+    f = session.add_get_feed("Foo", "url", "homepage")
 
     feed_id = f["id"]
 
@@ -113,7 +114,7 @@ def test_update_feed(session):
 
 
 def test_add_group_via_feed(session):
-    f = session.add_feed("Foo", "url", "homepage", group_name="Test_Group")
+    f = session.add_get_feed("Foo", "url", "homepage", group_name="Test_Group")
 
     feed_id = f["id"]
     g_list = session.get_groups()
@@ -135,7 +136,7 @@ def test_add_group_via_feed(session):
 
 
 def test_add_group_via_update_feed(session):
-    f = session.add_feed("Foo", "url", "homepage")
+    f = session.add_get_feed("Foo", "url", "homepage")
 
     feed_id = f["id"]
 
@@ -152,7 +153,7 @@ def test_add_group_via_update_feed(session):
 
 
 def test_group_delete_feed_no_group(session):
-    f = session.add_feed("Foo", "url", "homepage", group_name="Test_Group")
+    f = session.add_get_feed("Foo", "url", "homepage", group_name="Test_Group")
 
     feed_id = f["id"]
     g_list = session.get_groups()

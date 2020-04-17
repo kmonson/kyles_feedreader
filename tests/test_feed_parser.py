@@ -53,7 +53,7 @@ nasty tricks</span></div>
 
 
 def test_parser():
-    r = feed_parsing.parse_feed(feed_data)
+    t, r = feed_parsing.parse_feed(feed_data)
 
     assert r["name"] == "Sample Feed"
     assert r["description"] == "For documentation only"
@@ -65,12 +65,3 @@ def test_parser():
     assert entry["url"] == 'http://example.org/entry/3'
     assert entry["enclosure_url"] == 'http://www.example.com/movie.mp4'
 
-
-def test_parser_newer_than():
-    r = feed_parsing.parse_feed(feed_data, newer_than=datetime(2005, 11, 9, 0, 23, 48))
-
-    assert r["name"] == "Sample Feed"
-    assert r["description"] == "For documentation only"
-    assert r["home_page"] == "http://example.org/"
-
-    assert not len(r["entries"])

@@ -29,24 +29,25 @@ def _group_find_add_helper(group_name):
 
 
 @orm.db_session
-def add_feed(name, url, home_page, rate=update_rate, group_name=None):
+def add_get_feed(name, url, home_page, rate=update_rate, group_name=None):
     group = _group_find_add_helper(group_name)
 
     f = Feed.get(url=url)
-    if f is not None:
-        raise ValueError(f"Feed at {url} already exists in database.")
-
-    f = Feed(name=name,
-             url=url,
-             home_page=home_page,
-             update_rate=rate,
-             group=group)
+    if f is None:
+        f = Feed(name=name,
+                 url=url,
+                 home_page=home_page,
+                 update_rate=rate,
+                 group=group)
 
     return f.to_dict()
 
 
 @orm.db_session
 def add_group(name):
+    g = Group.get(name=name)
+    if g is not None:
+        raise ValueError(f"Group {name} already exists in database.")
     g = Group(name=name)
     return g.to_dict()
 
@@ -99,8 +100,11 @@ def get_flat_feeds():
 
 
 @orm.db_session
-def delete_feed(feed_id):
-    Feed[feed_id].delete()
+def delete_feed(feed):
+    if isinstance(feed, int):
+        Feed[feed].delete()
+    else:
+        Feed.select(lambda f: f.url == feed).delete()
 
 
 @orm.db_session
@@ -121,19 +125,23 @@ def update_feed(feed_id, **kwargs):
 
 @orm.db_session
 def add_feed_items(feed_id, items):
+    result = list()
     feed = Feed[feed_id]
 
     for item in items:
         # Make sure it doesn't exist before we try to add it.
         feed_item = FeedItem.get(url=item["url"])
         if feed_item is None:
-            FeedItem(feed=feed,
-                     **item)
+            f = FeedItem(feed=feed,
+                         **item)
+            result.append(f.to_dict())
 
     last_update = datetime.datetime.utcnow()
     # Pony doesn't support this yet.
     # last_update = last_update.replace(tzinfo=pytz.utc)
     feed.last_update = last_update
+
+    return result
 
 
 def _get_feed_item_query(unread_only):

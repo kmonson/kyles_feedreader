@@ -1,6 +1,8 @@
 import feedparser as fp
 import dateparser
 from datetime import datetime
+from enum import Enum, auto
+from http import HTTPStatus
 import warnings
 
 from bs4 import BeautifulSoup
@@ -19,9 +21,16 @@ def handler(date_string):
 # We add our own handler for all the weird stuff you see in feeds.
 fp.datetimes.registerDateHandler(handler)
 
-
 REQUIRED_FEED_ELEMENTS = ("title", "link")
 REQUIRED_ENTRY_ELEMENTS = ()
+
+
+class ResultType(Enum):
+    SUCCESS = auto()
+    PERMANENT_REDIRECT = auto()
+    NOT_MODIFIED = auto()
+    ERROR = auto()
+    AUTH_ERROR = auto()
 
 
 def parse_feed(feed_url: str, etag=None, modified=None):
@@ -31,12 +40,24 @@ def parse_feed(feed_url: str, etag=None, modified=None):
     if not modified:
         modified = None
 
+    print(feed_url)
     feed = fp.parse(feed_url, etag=etag, modified=modified)
 
     results = dict()
+    result_type = ResultType.SUCCESS
 
-    if "status" in feed and feed.status != 200:
-        return None
+    if "status" in feed:
+        if feed.status == HTTPStatus.MOVED_PERMANENTLY:
+            result_type = ResultType.PERMANENT_REDIRECT
+            results["new_url"] = feed.href
+        elif feed.status == HTTPStatus.NOT_MODIFIED:
+            return ResultType.NOT_MODIFIED, results
+        elif feed.status == HTTPStatus.UNAUTHORIZED:
+            results["status"] = HTTPStatus(feed.status)
+            return ResultType.AUTH_ERROR, results
+        elif feed.status not in (HTTPStatus.OK, HTTPStatus.FOUND):
+            results["status"] = HTTPStatus(feed.status)
+            return ResultType.ERROR, results
 
     results["etag"] = feed.get("etag")
     results["modified"] = feed.get("modified")
@@ -58,15 +79,16 @@ def parse_feed(feed_url: str, etag=None, modified=None):
     for e in entries:
         e_map = dict()
         timestamp = None
-        if hasattr(e, "published_parsed"):
+        if "published_parsed" in e:
             timestamp = datetime(*e.published_parsed[:6])
         e_map["timestamp"] = timestamp
         e_map["title"] = e.title
-        e_map["text"] = BeautifulSoup(e.summary, features="html.parser").get_text()
+        if "summary" in e:
+            e_map["text"] = BeautifulSoup(e.summary, features="html.parser").get_text()
         e_map["url"] = e.link
 
         if len(e.enclosures) > 0:
             e_map["enclosure_url"] = e.enclosures[0].href
 
         entry_results.append(e_map)
-    return results
+    return result_type, results
