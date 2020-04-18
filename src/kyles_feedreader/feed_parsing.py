@@ -1,7 +1,7 @@
 import feedparser as fp
 import dateparser
 from datetime import datetime
-from enum import Enum, auto
+from enum import Flag, auto
 from http import HTTPStatus
 import warnings
 
@@ -25,8 +25,8 @@ REQUIRED_FEED_ELEMENTS = ("title", "link")
 REQUIRED_ENTRY_ELEMENTS = ()
 
 
-class ResultType(Enum):
-    SUCCESS = auto()
+class ResultType(Flag):
+    NONE = 0
     PERMANENT_REDIRECT = auto()
     NOT_MODIFIED = auto()
     HTTP_ERROR = auto()
@@ -42,7 +42,7 @@ def parse_feed(feed_url: str, etag=None, modified=None):
         modified = None
 
     results = dict()
-    result_type = ResultType.SUCCESS
+    result_type = ResultType.NONE
 
     try:
         feed = fp.parse(feed_url, etag=etag, modified=modified)
@@ -50,12 +50,17 @@ def parse_feed(feed_url: str, etag=None, modified=None):
         results["error"] = f"{e.__class__.__name__}: {str(e)}"
         return ResultType.ERROR, results
 
+    # we can not be modified and still have a HTTPStatus.FOUND or HTTPStatus.MOVED_PERMANENTLY
+    # which will cause us to try to parse feed.feed anyway and fail.
+    if (etag is not None or modified is not None) and not feed.feed:
+        result_type |= ResultType.NOT_MODIFIED
+
     if "status" in feed:
         if feed.status == HTTPStatus.MOVED_PERMANENTLY:
-            result_type = ResultType.PERMANENT_REDIRECT
+            result_type |= ResultType.PERMANENT_REDIRECT
             results["new_url"] = feed.href
         elif feed.status == HTTPStatus.NOT_MODIFIED:
-            return ResultType.NOT_MODIFIED, results
+            result_type |= ResultType.NOT_MODIFIED
         elif feed.status == HTTPStatus.UNAUTHORIZED:
             results["status"] = HTTPStatus(feed.status)
             return ResultType.AUTH_ERROR, results
@@ -63,15 +68,20 @@ def parse_feed(feed_url: str, etag=None, modified=None):
             results["status"] = HTTPStatus(feed.status)
             return ResultType.HTTP_ERROR, results
 
-    results["etag"] = feed.get("etag")
-    results["modified"] = feed.get("modified")
+    # If we detected no modification had some other status besides HTTPStatus.NOT_MODIFIED
+    # we need to bail here.
+    if ResultType.NOT_MODIFIED in result_type:
+        return result_type, results
+
+    results["etag"] = feed.get("etag", "")
+    results["modified"] = feed.get("modified", "")
 
     f = feed.feed
     entries = feed.entries
 
     if any(x not in f for x in REQUIRED_FEED_ELEMENTS):
-        # TODO: log something here.
-        return None
+        results["error"] = f"Required elements missing from feed data: {', '.join(x for x in REQUIRED_FEED_ELEMENTS if x not in f)}"
+        return ResultType.ERROR, results
 
     results["name"] = f.title
     results["description"] = BeautifulSoup(f.get("description", ""), features="html.parser").get_text()

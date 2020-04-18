@@ -18,15 +18,15 @@ def cli(db_path, config_path=None):
 
 def _add_from_url(url, group=None):
     r, f = parse_feed(url)
-    if r in (ResultType.HTTP_ERROR, ResultType.AUTH_ERROR):
+    if r & (ResultType.HTTP_ERROR | ResultType.AUTH_ERROR):
         click.echo(f"Error: {f['status'].phrase}, {f['status'].description}")
         return
 
-    if r is ResultType.ERROR:
+    if ResultType.ERROR in r:
         click.echo(f"Error: {f['error']}")
         return
 
-    if r is ResultType.PERMANENT_REDIRECT:
+    if ResultType.PERMANENT_REDIRECT in r:
         new_url = f["new_url"]
         click.echo(f"Automatically redirecting to new URL: {new_url}")
         url = new_url
@@ -35,6 +35,8 @@ def _add_from_url(url, group=None):
     db_f = db_interface.add_get_feed(name, url, f["home_page"], group_name=group)
 
     feed_id = db_f["id"]
+
+    db_interface.update_feed(feed_id, etag=f["etag"], last_modified=f["modified"])
 
     db_interface.add_feed_items(feed_id, f["entries"])
 
@@ -79,7 +81,6 @@ def delete_group(names):
         db_interface.delete_group(name)
 
 
-
 @cli.command()
 def update():
     """Update all feeds in feed db.."""
@@ -87,14 +88,35 @@ def update():
     for feed in feeds:
         click.echo(f"Updating {feed['name']}")
         url = feed["url"]
-        f = parse_feed(url, etag=feed['etag'], modified=feed['last_modified'])
-        if f is None:
-            click.echo(f"{feed['name']} did not update. parse_feed returned None for whatever reason.")
+
+        r, f = parse_feed(url, etag=feed['etag'], modified=feed['last_modified'])
+
+        if r & (ResultType.HTTP_ERROR | ResultType.AUTH_ERROR):
+            click.echo(f"Error: {f['status'].phrase}, {f['status'].description}")
+            continue
+
+        if ResultType.ERROR in r:
+            click.echo(f"Error: {f['error']}")
+            continue
+
+        if ResultType.PERMANENT_REDIRECT in r:
+            feed_id = f["id"]
+            new_url = f["new_url"]
+            click.echo(f"Updating feed to new URL: {new_url}")
+            try:
+                db_interface.update_feed(feed_id, url=new_url)
+            except ValueError as e:
+                click.echo(f"Updating feed URL failed: {str(e)}")
+                continue
+
+        if ResultType.NOT_MODIFIED in r:
+            click.echo(f"No new data.")
             continue
 
         click.echo(f"Updating {feed['name']} entries in database.")
 
         feed_id = feed["id"]
+        db_interface.update_feed(feed_id, etag=f["etag"], last_modified=f["modified"])
         db_interface.add_feed_items(feed_id, f["entries"])
 
 

@@ -120,7 +120,20 @@ def update_feed(feed_id, **kwargs):
     if group is not None:
         kwargs["group"] = group
 
-    Feed[feed_id].set(**kwargs)
+    f = Feed[feed_id]
+
+    # If we are trying to update the URL ensure that it's different and doesn't conflict with an existing feed.
+    if "url" in kwargs:
+        url = kwargs["url"]
+        if url != f.url:
+            target_feed = Feed.get(url=url)
+            if target_feed is not None:
+                raise ValueError("Updated URL already exists")
+        else:
+            # If the URL hasn't changed just drop it.
+            kwargs.pop("url")
+
+    f.set(**kwargs)
 
 
 @orm.db_session
