@@ -29,6 +29,7 @@ class ResultType(Enum):
     SUCCESS = auto()
     PERMANENT_REDIRECT = auto()
     NOT_MODIFIED = auto()
+    HTTP_ERROR = auto()
     ERROR = auto()
     AUTH_ERROR = auto()
 
@@ -40,11 +41,14 @@ def parse_feed(feed_url: str, etag=None, modified=None):
     if not modified:
         modified = None
 
-    print(feed_url)
-    feed = fp.parse(feed_url, etag=etag, modified=modified)
-
     results = dict()
     result_type = ResultType.SUCCESS
+
+    try:
+        feed = fp.parse(feed_url, etag=etag, modified=modified)
+    except Exception as e:
+        results["error"] = f"{e.__class__.__name__}: {str(e)}"
+        return ResultType.ERROR, results
 
     if "status" in feed:
         if feed.status == HTTPStatus.MOVED_PERMANENTLY:
@@ -57,7 +61,7 @@ def parse_feed(feed_url: str, etag=None, modified=None):
             return ResultType.AUTH_ERROR, results
         elif feed.status not in (HTTPStatus.OK, HTTPStatus.FOUND):
             results["status"] = HTTPStatus(feed.status)
-            return ResultType.ERROR, results
+            return ResultType.HTTP_ERROR, results
 
     results["etag"] = feed.get("etag")
     results["modified"] = feed.get("modified")

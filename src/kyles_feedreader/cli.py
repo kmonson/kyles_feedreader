@@ -18,9 +18,18 @@ def cli(db_path, config_path=None):
 
 def _add_from_url(url, group=None):
     r, f = parse_feed(url)
-    if r in (ResultType.ERROR, ResultType.AUTH_ERROR):
+    if r in (ResultType.HTTP_ERROR, ResultType.AUTH_ERROR):
         click.echo(f"Error: {f['status'].phrase}, {f['status'].description}")
         return
+
+    if r is ResultType.ERROR:
+        click.echo(f"Error: {f['error']}")
+        return
+
+    if r is ResultType.PERMANENT_REDIRECT:
+        new_url = f["new_url"]
+        click.echo(f"Automatically redirecting to new URL: {new_url}")
+        url = new_url
 
     name = f["name"]
     db_f = db_interface.add_get_feed(name, url, f["home_page"], group_name=group)
