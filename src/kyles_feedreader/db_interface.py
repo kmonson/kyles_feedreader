@@ -44,11 +44,10 @@ def add_get_feed(name, url, home_page, rate=update_rate, group_name=None):
 
 
 @orm.db_session
-def add_group(name):
+def add_get_group(name):
     g = Group.get(name=name)
-    if g is not None:
-        raise ValueError(f"Group {name} already exists in database.")
-    g = Group(name=name)
+    if g is None:
+        g = Group(name=name)
     return g.to_dict()
 
 

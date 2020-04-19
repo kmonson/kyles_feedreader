@@ -55,12 +55,7 @@ def add(urls, group=None):
 def add_group(names):
     """Add groups specified by NAMES to feed db."""
     for name in names:
-        try:
-            db_interface.add_group(name)
-            click.echo(f"Created {name}")
-        except ValueError as e:
-            click.echo(str(e))
-
+        db_interface.add_get_group(name)
 
 
 @cli.command()
