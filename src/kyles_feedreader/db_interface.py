@@ -149,12 +149,19 @@ def add_feed_items(feed_id, items):
                          **item)
             result.append(f.to_dict())
 
+    update_feed_last_update(feed_id)
+
+    return result
+
+
+@orm.db_session
+def update_feed_last_update(feed_id):
+    feed = Feed[feed_id]
+
     last_update = datetime.datetime.utcnow()
     # Pony doesn't support this yet.
     # last_update = last_update.replace(tzinfo=pytz.utc)
     feed.last_update = last_update
-
-    return result
 
 
 def _get_feed_item_query(unread_only):

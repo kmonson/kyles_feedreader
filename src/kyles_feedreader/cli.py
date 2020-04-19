@@ -86,38 +86,39 @@ def update():
     """Update all feeds in feed db.."""
     feeds = db_interface.get_flat_feeds()
     for feed in feeds:
-        click.echo(f"Updating {feed['name']}")
         url = feed["url"]
+        name = feed['name']
 
         r, f = parse_feed(url, etag=feed['etag'], modified=feed['last_modified'])
 
         if r & (ResultType.HTTP_ERROR | ResultType.AUTH_ERROR):
-            click.echo(f"Error: {f['status'].phrase}, {f['status'].description}")
+            click.echo(f"Error getting {url}: {f['status'].phrase}, {f['status'].description}")
             continue
 
         if ResultType.ERROR in r:
-            click.echo(f"Error: {f['error']}")
+            click.echo(f"Error getting {url}: {f['error']}")
             continue
 
         if ResultType.PERMANENT_REDIRECT in r:
             feed_id = f["id"]
             new_url = f["new_url"]
-            click.echo(f"Updating feed to new URL: {new_url}")
+            click.echo(f"Updating {name} to new URL: {new_url}")
             try:
                 db_interface.update_feed(feed_id, url=new_url)
             except ValueError as e:
-                click.echo(f"Updating feed URL failed: {str(e)}")
+                click.echo(f"Updating {name} URL failed: {str(e)}")
                 continue
 
+        feed_id = feed["id"]
+
         if ResultType.NOT_MODIFIED in r:
-            click.echo(f"No new data.")
+            db_interface.update_feed_last_update(feed_id)
             continue
 
-        click.echo(f"Updating {feed['name']} entries in database.")
-
-        feed_id = feed["id"]
         db_interface.update_feed(feed_id, etag=f["etag"], last_modified=f["modified"])
-        db_interface.add_feed_items(feed_id, f["entries"])
+        new_items = db_interface.add_feed_items(feed_id, f["entries"])
+        if new_items:
+            click.echo(f"Added {len(new_items)} items to {name}")
 
 
 def print_feed_list(feed_list, verbose):
