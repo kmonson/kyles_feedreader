@@ -248,3 +248,19 @@ def test_group_viewed_items(session):
 
     assert fi1[0]["viewed"] is True
     assert fi2[0]["viewed"] is True
+
+
+def test_has_unviewed(session):
+    f = session.add_get_feed("Foo", "url", "homepage")
+
+    items = [
+        {"title": "Foo1", "url": "Foo1URL"},
+        {"title": "Foo2", "url": "Foo2URL"}
+    ]
+    session.add_feed_items(f["id"], items)
+
+    assert session.has_unviewed_feed_items()
+
+    session.mark_feed_items_viewed(f["id"])
+
+    assert not session.has_unviewed_feed_items()
