@@ -20,7 +20,7 @@ def session(database):
 
 
 def test_add_group(session):
-    g = session.add_group("Foo")
+    g = session.add_get_group("Foo")
     assert g["name"] == "Foo"
 
     g_list = session.get_groups()
@@ -29,7 +29,7 @@ def test_add_group(session):
 
 
 def test_delete_group_with_id(session):
-    g = session.add_group("Foo")
+    g = session.add_get_group("Foo")
     g_id = g["id"]
 
     g_list = session.get_groups()
@@ -42,7 +42,7 @@ def test_delete_group_with_id(session):
 
 
 def test_delete_group_with_name(session):
-    g = session.add_group("Foo")
+    g = session.add_get_group("Foo")
     g_name = g["name"]
 
     g_list = session.get_groups()
@@ -170,3 +170,81 @@ def test_group_delete_feed_no_group(session):
     f = f_dict[None][0]
     assert f["id"] == feed_id
     assert "Test_Group" not in f_dict
+
+
+def test_add_feed_items(session):
+    f = session.add_get_feed("Foo", "url", "homepage")
+
+    items = [
+        {"title": "Foo1", "url": "Foo1URL"},
+        {"title": "Foo2", "url": "Foo2URL"}
+    ]
+    session.add_feed_items(f["id"], items)
+    fi = session.get_feed_items(f["id"])
+    assert fi[0]["url"] == "Foo1URL"
+    assert fi[0]["title"] == "Foo1"
+    assert fi[0]["read"] is False
+    assert fi[0]["viewed"] is False
+
+    assert fi[1]["url"] == "Foo2URL"
+    assert fi[1]["title"] == "Foo2"
+    assert fi[1]["read"] is False
+    assert fi[1]["viewed"] is False
+
+
+def test_all_viewed_items(session):
+    f = session.add_get_feed("Foo", "url", "homepage")
+
+    items = [
+        {"title": "Foo1", "url": "Foo1URL"},
+        {"title": "Foo2", "url": "Foo2URL"}
+    ]
+    session.add_feed_items(f["id"], items)
+    fi = session.get_feed_items(f["id"])
+
+    assert fi[0]["viewed"] is False
+    assert fi[1]["viewed"] is False
+
+    session.mark_all_items_viewed()
+
+    fi = session.get_feed_items(f["id"])
+
+    assert fi[0]["viewed"] is True
+    assert fi[1]["viewed"] is True
+
+
+def test_group_viewed_items(session):
+    f1 = session.add_get_feed("Foo1", "url1", "homepage", group_name="g1")
+    f2 = session.add_get_feed("Foo2", "url2", "homepage")
+
+    items = [
+        {"title": "Foo11", "url": "Foo11URL"}
+    ]
+    session.add_feed_items(f1["id"], items)
+
+    items = [
+        {"title": "Foo21", "url": "Foo21URL"}
+    ]
+    session.add_feed_items(f2["id"], items)
+
+    fi1 = session.get_feed_items(f1["id"])
+    fi2 = session.get_feed_items(f2["id"])
+
+    assert fi1[0]["viewed"] is False
+    assert fi2[0]["viewed"] is False
+
+    session.mark_group_items_viewed(f1["group"])
+
+    fi1 = session.get_feed_items(f1["id"])
+    fi2 = session.get_feed_items(f2["id"])
+
+    assert fi1[0]["viewed"] is True
+    assert fi2[0]["viewed"] is False
+
+    session.mark_group_items_viewed(None)
+
+    fi1 = session.get_feed_items(f1["id"])
+    fi2 = session.get_feed_items(f2["id"])
+
+    assert fi1[0]["viewed"] is True
+    assert fi2[0]["viewed"] is True

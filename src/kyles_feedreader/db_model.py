@@ -31,7 +31,7 @@ class FeedItem(db.Entity):
     enclosure_path = orm.Optional(str)
     timestamp = orm.Optional(datetime, index=True)
     read = orm.Required(bool, index=True, default=bool)
-    viewed = orm.Required(bool, default=bool)
+    viewed = orm.Required(bool, index=True, default=bool)
     title = orm.Required(str)
     text = orm.Optional(str)
     url = orm.Required(str, unique=True)

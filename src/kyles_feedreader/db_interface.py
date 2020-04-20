@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 import datetime
+import pathlib
 import pytz
 from dateutil.tz import tzlocal
 from pony import orm
@@ -10,6 +11,7 @@ from .defaults import update_rate
 
 
 def initialize_sql(filename):
+    pathlib.Path(filename).parent.mkdir(parents=True, exist_ok=True)
     initialize_db(provider='sqlite', filename=filename, create_db=True)
 
 
@@ -177,9 +179,9 @@ def get_all_feed_items(unread_only=True):
 
 
 @orm.db_session
-def get_group_feed_items(group_id, unread_only=True):
+def get_group_feed_items(group_id=None, unread_only=True):
     q = _get_feed_item_query(unread_only)
-    group = Group[group_id]
+    group = Group[group_id] if group_id is not None else None
     q = orm.select(i for i in q if i.feed.group == group)
     return [f.to_dict() for f in q]
 
@@ -191,3 +193,31 @@ def get_feed_items(feed_id, unread_only=True):
     q = orm.select(i for i in q if i.feed == feed)
     return [f.to_dict() for f in q]
 
+
+@orm.db_session
+def has_unviewed_feed_items():
+    r = orm.select(i for i in FeedItem if not i.viewed).exists()
+    return r
+
+# ponyorm does not yet support bulk update so we do it in a loop.
+@orm.db_session
+def mark_all_items_viewed():
+    q = orm.select(i for i in FeedItem if not i.viewed)
+    for i in q:
+        i.set(viewed=True)
+
+
+@orm.db_session
+def mark_group_items_viewed(group_id=None):
+    group = Group[group_id] if group_id is not None else None
+    q = orm.select(i for i in FeedItem if not i.viewed and i.feed.group == group)
+    for i in q:
+        i.set(viewed=True)
+
+
+@orm.db_session
+def mark_feed_items_viewed(feed_id):
+    feed = Feed[feed_id]
+    q = orm.select(i for i in FeedItem if not i.viewed and i.feed == feed)
+    for i in q:
+        i.set(viewed=True)

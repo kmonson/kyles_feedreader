@@ -1,7 +1,6 @@
 # By Kyle Monson
 
 import click
-import pathlib
 import xml.etree.ElementTree as ET
 
 from . import db_interface, defaults
@@ -12,7 +11,6 @@ from .feed_parsing import parse_feed, ResultType
 @click.option("--db-path", default=defaults.db_path, type=click.Path(dir_okay=False, resolve_path=True))
 # @click.option("--config-path", default=defaults.config_path)
 def cli(db_path, config_path=None):
-    pathlib.Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     db_interface.initialize_sql(db_path)
 
 
