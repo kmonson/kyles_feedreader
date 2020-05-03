@@ -10,6 +10,9 @@ from .db_model import db, Group, Feed, FeedItem
 from .defaults import update_rate
 
 
+ALL = object()
+
+
 def initialize_sql(filename):
     pathlib.Path(filename).parent.mkdir(parents=True, exist_ok=True)
     initialize_db(provider='sqlite', filename=filename, create_db=True)
@@ -76,20 +79,34 @@ def utc_unaware_to_local(ts):
 
 
 @orm.db_session
-def get_feeds():
+def get_feeds_by_group(group_id=ALL):
+    if group_id is ALL:
+        q = Feed.select()
+    elif group_id is None:
+        q = Feed.select(lambda feed: feed.group is None)
+    else:
+        group = Group.get(id=group_id)
+        if group is None:
+            raise ValueError("Group does not exist")
+        q = Feed.select(lambda feed: feed.group is group)
+
     result = defaultdict(list)
-    q = Feed.select().sort_by(Feed.group, Feed.name)
+
+    def append(name_, id_, fd_):
+        result[name_, id_].append(fd_)
+
+    q = q.sort_by(Feed.group, Feed.name)
     for f in q:
-        name = f.group.name if f.group is not None else None
+        name, _id = (f.group.name, f.group.id) if f.group is not None else ("No Group", -1)
         fd = f.to_dict()
         fd["last_update"] = utc_unaware_to_local(fd.get("last_update"))
-        result[name].append(fd)
+        append(name, _id, fd)
 
     return result
 
 
 @orm.db_session
-def get_flat_feeds():
+def get_feeds():
     result = list()
     q = Feed.select().sort_by(Feed.name)
     for f in q:
@@ -98,6 +115,14 @@ def get_flat_feeds():
         result.append(fd)
 
     return result
+
+
+@orm.db_session
+def get_feed(feed_id):
+    feed = Feed.get(id=feed_id)
+    if feed is None:
+        return None
+    return feed.to_dict()
 
 
 @orm.db_session
@@ -192,6 +217,14 @@ def get_feed_items(feed_id, unread_only=True):
     feed = Feed[feed_id]
     q = orm.select(i for i in q if i.feed == feed)
     return [f.to_dict() for f in q]
+
+
+@orm.db_session
+def get_feed_item(feed_item_id):
+    feed_item = FeedItem.get(id=feed_item_id)
+    if feed_item is None:
+        return None
+    return feed_item.to_dict()
 
 
 @orm.db_session

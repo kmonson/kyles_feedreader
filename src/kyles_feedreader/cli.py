@@ -1,10 +1,14 @@
 # By Kyle Monson
 
 import click
+import textwrap
 import xml.etree.ElementTree as ET
 
 from . import db_interface, defaults
 from .feed_parsing import parse_feed, ResultType
+
+
+text_wrapper = textwrap.TextWrapper()
 
 
 @click.group()
@@ -77,7 +81,7 @@ def delete_group(names):
 @cli.command()
 def update():
     """Update all feeds in feed db.."""
-    feeds = db_interface.get_flat_feeds()
+    feeds = db_interface.get_feeds()
     for feed in feeds:
         url = feed["url"]
         name = feed['name']
@@ -114,32 +118,77 @@ def update():
             click.echo(f"Added {len(new_items)} items to {name}")
 
 
-def print_feed_list(feed_list, verbose):
-    for feed in feed_list:
-        click.echo(f"\t{feed['name']} Updated: {feed['last_update']}")
-        click.echo(f"\t Homepage: {feed['home_page']}")
-        click.echo(f"\t URL: {feed['url']}")
-        if verbose:
+def print_feed(feed, verbose, prefix=""):
+    click.echo(f"{prefix}{feed['id']} {feed['name']} Updated: {feed['last_update']}")
+    if verbose > 0:
+        click.echo(f"{prefix} Homepage: {feed['home_page']}")
+        click.echo(f"{prefix} URL: {feed['url']}")
+        if verbose > 1:
+            if feed['description']:
+                click.echo(f"{prefix} Description: {feed['description']}")
             for item in db_interface.get_feed_items(feed["id"]):
-                click.echo(f"\t\t{item['title']}")
-                click.echo(f"\t\t Timestamp: {item['timestamp']}")
-                click.echo(f"\t\t URL: {item['url']}")
-                click.echo(f"\t\t Enclosure: {item['enclosure_url']}")
-                click.echo(f"\t\t Read: {item['read']}")
+                print_feed_item(item, verbose-2, prefix=f"{prefix} ")
 
 
-@cli.command(name="list")
-@click.option("-v", "--verbose", is_flag=True)
-def list_(verbose):
-    """List all feeds, sorted by group."""
-    feeds = db_interface.get_feeds()
-    no_group = feeds.pop(None, [])
-    for group, feed_list in feeds.items():
-        click.echo(group, color="green")
-        print_feed_list(feed_list, verbose)
+def print_feed_item(item, verbose, prefix=""):
+    click.echo(f"{prefix}{item['id']} {item['title']}")
+    if item['timestamp']:
+        click.echo(f"{prefix} Timestamp: {item['timestamp']}")
+    click.echo(f"{prefix} URL: {item['url']}")
+    if item['enclosure_url']:
+        click.echo(f"{prefix} Enclosure: {item['enclosure_url']}")
+    click.echo(f"{prefix} Read: {item['read']}")
+    if verbose > 0:
+        text_wrapper.initial_indent = text_wrapper.subsequent_indent = prefix
+        if item["text"]:
+            click.echo(text_wrapper.fill(item["text"]))
 
-    click.echo("No Group", color="green")
-    print_feed_list(no_group, verbose)
+
+def print_group(group_id, group_name, feed_list, verbose):
+    click.echo(f"{group_id} {group_name}", color="green")
+    for feed in feed_list:
+        print_feed(feed, verbose, prefix=" ")
+
+
+@cli.command(name="view")
+@click.option("-v", "--verbose", count=True)
+@click.option("-g", "--group-id", "group_ids", type=int, multiple=True)
+@click.option("-f", "--feed-id", "feed_ids", type=int, multiple=True)
+@click.option("-fi", "--feed-item-id", "feed_item_ids", type=int, multiple=True)
+def view(verbose, group_ids, feed_ids, feed_item_ids):
+    """Print feed list."""
+    if not any([group_ids, feed_ids, feed_item_ids]):
+        groups = db_interface.get_feeds_by_group()
+        for (group_name, gid), feed_list in groups.items():
+            print_group(gid, group_name, feed_list, verbose)
+        return
+
+    groups = {}
+    for group_id in group_ids:
+        if group_id < 0:
+            group_id = None
+
+        try:
+            groups.update(db_interface.get_feeds_by_group(group_id))
+        except ValueError:
+            click.echo(f"Group ID {group_id} not found")
+
+    for (group_name, gid), feed_list in groups.items():
+        print_group(gid, group_name, feed_list, verbose)
+
+    for feed_id in feed_ids:
+        feed = db_interface.get_feed(feed_id)
+        if feed is None:
+            click.echo(f"Feed ID {feed_id} not found")
+            continue
+        print_feed(feed, verbose)
+
+    for feed_item_id in feed_item_ids:
+        feed = db_interface.get_feed_item(feed_item_id)
+        if feed is None:
+            click.echo(f"Feed Item ID {feed_id} not found")
+            continue
+        print_feed_item(feed, verbose)
 
 
 @cli.command(name="import")
