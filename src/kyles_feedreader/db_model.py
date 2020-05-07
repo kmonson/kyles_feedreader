@@ -3,13 +3,23 @@
 from pony import orm
 
 from datetime import datetime, timedelta
+from typing import NamedTuple
 
+class GroupTuple(NamedTuple):
+    name: str
+    id: int
+
+
+NO_GROUP_TUPLE = GroupTuple("No Group", -1)
 db = orm.Database()
 
 
 class Group(db.Entity):
     name = orm.Required(str, unique=True, index=True)
     feeds = orm.Set('Feed')
+
+    def to_tuple(self):
+        return GroupTuple(**self.to_dict())
 
 
 class Feed(db.Entity):

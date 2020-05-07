@@ -6,7 +6,7 @@ import pathlib
 import pytz
 from dateutil.tz import tzlocal
 from pony import orm
-from .db_model import db, Group, Feed, FeedItem
+from .db_model import db, Group, Feed, FeedItem, NO_GROUP_TUPLE
 from .defaults import update_rate
 
 
@@ -97,7 +97,7 @@ def get_feeds_by_group(group_id=ALL):
 
     q = q.sort_by(Feed.group, Feed.name)
     for f in q:
-        name, _id = (f.group.name, f.group.id) if f.group is not None else ("No Group", -1)
+        name, _id = f.group.to_tuple() if f.group is not None else NO_GROUP_TUPLE
         fd = f.to_dict()
         fd["last_update"] = utc_unaware_to_local(fd.get("last_update"))
         append(name, _id, fd)
