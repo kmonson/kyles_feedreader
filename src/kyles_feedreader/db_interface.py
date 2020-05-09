@@ -90,17 +90,14 @@ def get_feeds_by_group(group_id=ALL):
             raise ValueError("Group does not exist")
         q = Feed.select(lambda feed: feed.group is group)
 
-    result = defaultdict(list)
-
-    def append(name_, id_, fd_):
-        result[name_, id_].append(fd_)
+    result = defaultdict(lambda: {"feeds": list(), "unreads": False})
 
     q = q.sort_by(Feed.group, Feed.name)
     for f in q:
         name, _id = f.group.to_tuple() if f.group is not None else NO_GROUP_TUPLE
         fd = f.to_dict()
         fd["last_update"] = utc_unaware_to_local(fd.get("last_update"))
-        append(name, _id, fd)
+        result[name, _id]["feeds"].append(fd)
 
     return result
 

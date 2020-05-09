@@ -68,7 +68,7 @@ def test_add_feed(session):
     feed_id = f["id"]
 
     f_dict = session.get_feeds_by_group()
-    f = f_dict["No Group", -1][0]
+    f = f_dict["No Group", -1]["feeds"][0]
     assert f["name"] == "Foo"
     assert f["url"] == "url"
     assert f["home_page"] == "homepage"
@@ -101,7 +101,7 @@ def test_update_feed(session):
     session.update_feed(feed_id, home_page="homepage2", update_rate=timedelta(hours=2))
 
     f_dict = session.get_feeds_by_group()
-    f = f_dict["No Group", -1][0]
+    f = f_dict["No Group", -1]["feeds"][0]
     assert f["name"] == "Foo"
     assert f["url"] == "url"
     assert f["home_page"] == "homepage2"
@@ -123,7 +123,7 @@ def test_add_group_via_feed(session):
     assert g_list[0]["name"] == "Test_Group"
 
     f_dict = session.get_feeds_by_group()
-    f = f_dict["Test_Group", 1][0]
+    f = f_dict["Test_Group", 1]["feeds"][0]
     assert f["name"] == "Foo"
     assert f["url"] == "url"
     assert f["home_page"] == "homepage"
@@ -148,7 +148,7 @@ def test_add_group_via_update_feed(session):
     assert g_list[0]["name"] == "Test_Group"
 
     f_dict = session.get_feeds_by_group()
-    f = f_dict["Test_Group", 1][0]
+    f = f_dict["Test_Group", 1]["feeds"][0]
     assert f["group"] == g_id
 
 
@@ -167,7 +167,7 @@ def test_group_delete_feed_no_group(session):
     assert len(g_list) == 0
 
     f_dict = session.get_feeds_by_group()
-    f = f_dict["No Group", -1][0]
+    f = f_dict["No Group", -1]["feeds"][0]
     assert f["id"] == feed_id
     assert "Test_Group" not in f_dict
 

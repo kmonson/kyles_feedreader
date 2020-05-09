@@ -5,6 +5,7 @@ from pony import orm
 from datetime import datetime, timedelta
 from typing import NamedTuple
 
+
 class GroupTuple(NamedTuple):
     name: str
     id: int
@@ -35,6 +36,15 @@ class Feed(db.Entity):
     last_modified = orm.Optional(str)  # Stored as a string to send right back to server on request.
     group = orm.Optional(Group)
     items = orm.Set('FeedItem')
+
+    @property
+    def unreads(self):
+        return orm.select(fi for fi in self.items if not fi.read).exists()
+
+    def to_dict(self):
+        result = super().to_dict()
+        result["unreads"] = self.unreads
+        return result
 
 
 class FeedItem(db.Entity):

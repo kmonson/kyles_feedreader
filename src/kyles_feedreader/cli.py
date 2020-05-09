@@ -159,8 +159,8 @@ def view(verbose, group_ids, feed_ids, feed_item_ids):
     """Print feed list."""
     if not any([group_ids, feed_ids, feed_item_ids]):
         groups = db_interface.get_feeds_by_group()
-        for (group_name, gid), feed_list in groups.items():
-            print_group(gid, group_name, feed_list, verbose)
+        for (group_name, gid), group_info in groups.items():
+            print_group(gid, group_name, group_info["feeds"], verbose)
         return
 
     groups = {}
@@ -173,8 +173,8 @@ def view(verbose, group_ids, feed_ids, feed_item_ids):
         except ValueError:
             click.echo(f"Group ID {group_id} not found")
 
-    for (group_name, gid), feed_list in groups.items():
-        print_group(gid, group_name, feed_list, verbose)
+    for (group_name, gid), group_info in groups.items():
+        print_group(gid, group_name, group_info["feeds"], verbose)
 
     for feed_id in feed_ids:
         feed = db_interface.get_feed(feed_id)
