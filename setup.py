@@ -29,6 +29,7 @@ setup(
     entry_points={
         'console_scripts': [
             'kfr-cli=kyles_feedreader.cli:cli',
+            'kfr=kyles_feedreader.__main__:main',
         ],
     }
 )
