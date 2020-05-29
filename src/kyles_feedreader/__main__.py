@@ -1,21 +1,26 @@
 import gevent
-import time
+
 from asciimatics.screen import Screen
-from asciimatics.scene import Scene
 from asciimatics.effects import Cycle, Stars
 from asciimatics.renderers import FigletText
 from asciimatics.exceptions import StopApplication
 
+import click
 
-def main_loop():
+from .controllers.main import MainController
+from . import db_interface, defaults
+
+
+def main_loop(controller):
     screen = None
     while True:
         if screen is None or screen.has_resized():
             if screen is not None:
                 screen.close(False)
             screen = Screen.open()
-            effects = create_effect(screen)
-            screen.set_scenes([Scene(effects, 500)])
+            controller.build_ui(screen, None)
+            # effects = create_effect(screen)
+            # screen.set_scenes([Scene(effects, 500)])
         try:
             screen.draw_next_frame()
         except StopApplication:
@@ -40,9 +45,12 @@ def create_effect(screen):
     return effects
 
 
-def main():
-    # Define the scene that you'd like to play.
-    loop = gevent.spawn(main_loop)
+@click.command()
+@click.option("--db-path", default=defaults.db_path, type=click.Path(dir_okay=False, resolve_path=True))
+def main(db_path):
+    db_interface.initialize_sql(db_path)
+    controller = MainController()
+    loop = gevent.spawn(main_loop, controller)
     loop.join()
 
 

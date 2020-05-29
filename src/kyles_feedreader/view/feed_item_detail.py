@@ -1,0 +1,4 @@
+
+
+class FeedItemDetailView:
+    pass

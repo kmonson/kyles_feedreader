@@ -1,0 +1,5 @@
+
+
+class FeedItemDetailController:
+    pass
+
