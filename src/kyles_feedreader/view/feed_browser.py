@@ -1,12 +1,23 @@
 from asciimatics.widgets import Frame, Layout, ListBox, Widget
 from ..db_interface import NO_GROUP_TUPLE
 
+
+def calc_frame_dim(screen_width: int, item_view):
+    width = max(min(screen_width // 6, 48), 16)
+    x = 0
+    if item_view:
+        x = width
+        width = screen_width - width
+    return width, x
+
+
 class FeedListView(Frame):
     def __init__(self, screen, on_select=None):
+        width, x = calc_frame_dim(screen.width, False)
         super().__init__(screen,
                          screen.height-2,
-                         max(min(screen.width // 8, 48), 16),
-                         x=0,
+                         width,
+                         x=x,
                          reduce_cpu=True,
                          title="Feeds")
 
@@ -39,7 +50,16 @@ class FeedListView(Frame):
         return options
 
 
+class FeedItemView(Frame):
+    def __init__(self, screen, on_select=None):
+        width, x = calc_frame_dim(screen.width, False)
+        super().__init__(screen,
+                         screen.height - 2,
+                         width,
+                         x=x,
+                         reduce_cpu=True,
+                         title="Feeds")
 
-
-class FeedItemView:
-    pass
+        layout = Layout([100], fill_frame=True)
+        self.add_layout(layout)
+        self.fix()

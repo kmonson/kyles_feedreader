@@ -1,7 +1,7 @@
 pony
 gevent
 asciimatics
-git+git://github.com/kurtmckee/feedparser.git
+# git+git://github.com/kurtmckee/feedparser.git
 click
 requests
 grequests
