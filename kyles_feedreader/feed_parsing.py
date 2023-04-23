@@ -84,7 +84,7 @@ def parse_feed(feed_url: str, etag=None, modified=None):
         return ResultType.ERROR, results
 
     results["name"] = f.title
-    results["description"] = BeautifulSoup(f.get("description", ""), features="html.parser").get_text()
+    results["description"] = BeautifulSoup(f.get("description", ""), features="lxml").get_text()
     results["home_page"] = f.link
 
     results["url"] = feed_url if feed_url.startswith("http") else None
@@ -98,7 +98,7 @@ def parse_feed(feed_url: str, etag=None, modified=None):
         e_map["timestamp"] = timestamp
         e_map["title"] = e.title
         if "summary" in e:
-            e_map["text"] = BeautifulSoup(e.summary, features="html.parser").get_text()
+            e_map["text"] = BeautifulSoup(e.summary, features="lxml").get_text()
         e_map["url"] = e.link
 
         if len(e.enclosures) > 0:

@@ -1,5 +1,4 @@
 from asciimatics.widgets import Frame, Layout, ListBox, Widget
-from ..db_interface import NO_GROUP_TUPLE
 
 
 def calc_frame_dim(screen_width: int, item_view):

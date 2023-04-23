@@ -1,5 +1,4 @@
 from kyles_feedreader import feed_parsing
-from kyles_feedreader.feed_parsing import ResultType
 from datetime import datetime
 import time
 
@@ -217,5 +216,5 @@ def test_parser(mock_fp_parse):
 
 def test_not_modified(mock_fp_parse):
     t, r = feed_parsing.parse_feed('http://cdn.sheldoncomics.com/rss.xml', '"a740a10f5d95c83b973395fc75c97714"')
-    assert t == ResultType.NOT_MODIFIED
+    assert t == feed_parsing.ResultType.NOT_MODIFIED
     assert not r

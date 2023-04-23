@@ -13,8 +13,9 @@ setup(
     install_requires=[
         "pony",
         "gevent",
+        "lxml",
         "asciimatics",
-        "feedparser @ git+git://github.com/kurtmckee/feedparser.git",
+        "feedparser",
         "click",
         "requests",
         "grequests",
