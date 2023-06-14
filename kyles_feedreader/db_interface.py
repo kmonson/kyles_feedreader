@@ -299,7 +299,7 @@ class DBInterface:
     def get_group_feed_items(self, group: GroupData, unread_only=True) -> list[FeedItemData]:
         group_id = group.id
         q = self._get_feed_item_query(unread_only)
-        group = self.db.RootGroup[group_id] if group_id is not None else None
+        group = self.db.RootGroup[group_id]
         q = orm.select(i for i in q if i.feed.group == group)
         return [db_to_feed_item(f) for f in q]
 
@@ -311,12 +311,24 @@ class DBInterface:
         return [db_to_feed_item(f) for f in q]
 
     @orm.db_session
-    def has_unviewed_feed_items(self):
+    def any_has_unviewed_feed_items(self) -> bool:
         r = orm.select(i for i in self.db.FeedItem if not i.viewed).exists()
         return r
 
     @orm.db_session
-    def mark_all_items_viewed(self):
+    def group_has_unviewed_feed_items(self, group: GroupData) -> bool:
+        group = self.db.RootGroup[group.id]
+        r = orm.select(i for i in self.db.FeedItem if not i.viewed and i.feed.group == group).exists()
+        return r
+
+    @orm.db_session
+    def feed_has_unviewed_feed_items(self, feed: FeedData) -> bool:
+        feed = self.db.Feed[feed.id]
+        r = orm.select(i for i in self.db.FeedItem if not i.viewed and i.feed == feed).exists()
+        return r
+
+    @orm.db_session
+    def mark_all_items_viewed(self) -> None:
         # ponyorm does not yet support bulk update, so we do it in a loop.
         q = orm.select(i for i in self.db.FeedItem if not i.viewed)
         for i in q:
@@ -335,3 +347,29 @@ class DBInterface:
         q = orm.select(i for i in self.db.FeedItem if not i.viewed and i.feed == feed)
         for i in q:
             i.set(viewed=True)
+
+    @orm.db_session
+    def mark_all_items_read(self) -> None:
+        # ponyorm does not yet support bulk update, so we do it in a loop.
+        q = orm.select(i for i in self.db.FeedItem if not i.read)
+        for i in q:
+            i.set(read=True)
+
+    @orm.db_session
+    def mark_group_items_read(self, group: GroupData):
+        group = self.db.RootGroup[group.id]
+        q = orm.select(i for i in self.db.FeedItem if not i.read and i.feed.group == group)
+        for i in q:
+            i.set(read=True)
+
+    @orm.db_session
+    def mark_feed_items_read(self, feed: FeedData):
+        feed = self.db.Feed[feed.id]
+        q = orm.select(i for i in self.db.FeedItem if not i.read and i.feed == feed)
+        for i in q:
+            i.set(read=True)
+
+    @orm.db_session
+    def mark_feed_item_read(self, feed_item: FeedItemData):
+        fi = self.db.FeedItem[feed_item.id]
+        fi.set(read=True)

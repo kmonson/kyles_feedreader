@@ -177,7 +177,7 @@ def test_all_viewed_items(session):
     assert fi[0].viewed is True
     assert fi[1].viewed is True
 
-    assert not session.has_unviewed_feed_items()
+    assert not session.any_has_unviewed_feed_items()
 
 
 def test_group_viewed_items(session):
@@ -227,11 +227,11 @@ def test_has_unviewed(session):
     ]
     session.add_feed_items(f, items)
 
-    assert session.has_unviewed_feed_items()
+    assert session.any_has_unviewed_feed_items()
 
     session.mark_feed_items_viewed(f)
 
-    assert not session.has_unviewed_feed_items()
+    assert not session.any_has_unviewed_feed_items()
 
 
 def test_unread_interface(session):
@@ -256,7 +256,7 @@ def test_unread_interface(session):
 
     assert len(session.get_all_feed_items(unread_only=True)) == 12
 
- 
+
     # assert not session.get_feed_items(f, unread_only=True)
     # assert not session.get_all_feed_items(unread_only=True)
     # assert not session.get_group_feed_items(session.root_group, unread_only=True)
